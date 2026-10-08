@@ -223,20 +223,21 @@ export default function App() {
         <div
           ref={rightGanttContainerRef}
           onScroll={handleRightScroll}
-          className="gantt-chart-area flex-1 overflow-auto relative"
+          className="gantt-chart-area flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col"
           style={{
             backgroundColor: theme.colors.bgTimeline,
-            overflowX: 'auto', // Forzar la aparición de la barra horizontal
           }}
           onDoubleClick={() => {
             if (selectedTaskId) setShowTaskDetailModal(true);
           }}
         >
-          <GanttChart
-            visibleTasks={visibleTasks}
-            scrollContainerRef={rightGanttContainerRef}
-            svgRef={svgRef}
-          />
+          <div className="flex-1 overflow-x-auto overflow-y-hidden w-full">
+            <GanttChart
+              visibleTasks={visibleTasks}
+              scrollContainerRef={rightGanttContainerRef}
+              svgRef={svgRef}
+            />
+          </div>
         </div>
 
         {/* Floating Legend Dock */}
