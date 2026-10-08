@@ -223,7 +223,7 @@ export default function App() {
         <div
           ref={rightGanttContainerRef}
           onScroll={handleRightScroll}
-          className="gantt-chart-area flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col"
+          className="gantt-chart-area flex-1 overflow-auto relative"
           style={{
             backgroundColor: theme.colors.bgTimeline,
           }}
@@ -231,13 +231,11 @@ export default function App() {
             if (selectedTaskId) setShowTaskDetailModal(true);
           }}
         >
-          <div className="flex-1 overflow-x-auto overflow-y-hidden w-full">
-            <GanttChart
-              visibleTasks={visibleTasks}
-              scrollContainerRef={rightGanttContainerRef}
-              svgRef={svgRef}
-            />
-          </div>
+          <GanttChart
+            visibleTasks={visibleTasks}
+            scrollContainerRef={rightGanttContainerRef}
+            svgRef={svgRef}
+          />
         </div>
 
         {/* Floating Legend Dock */}
