@@ -1,0 +1,6 @@
+{
+  "name": "KronoGantt",
+  "description": "Aplicación web moderna y de alto rendimiento para la creación y gestión de Diagramas de Gantt con Modo Fantasma, seguimiento de costes e importación/exportación avanzada.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
