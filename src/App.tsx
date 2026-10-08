@@ -226,6 +226,7 @@ export default function App() {
           className="gantt-chart-area flex-1 overflow-auto relative"
           style={{
             backgroundColor: theme.colors.bgTimeline,
+            overflowX: 'auto', // Forzar la aparición de la barra horizontal
           }}
           onDoubleClick={() => {
             if (selectedTaskId) setShowTaskDetailModal(true);
