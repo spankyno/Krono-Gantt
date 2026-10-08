@@ -1,26 +1,60 @@
 @import "tailwindcss";
 
-/* Custom modern scrollbars */
-::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+/* Hide ALL vertical scrollbars across the application */
+::-webkit-scrollbar:vertical {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* Horizontal scrollbar styling for the Gantt timeline */
+.gantt-chart-area {
+  scrollbar-width: thin !important;
+  scrollbar-color: #6366f1 rgba(15, 23, 42, 0.8) !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
+.gantt-chart-area::-webkit-scrollbar {
+  width: 0px !important;
+  height: 12px !important;
+  display: block !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+.gantt-chart-area::-webkit-scrollbar:vertical {
+  width: 0px !important;
+  height: 0px !important;
+  display: none !important;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+.gantt-chart-area::-webkit-scrollbar:horizontal {
+  height: 12px !important;
+  display: block !important;
+}
+
+.gantt-chart-area::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.gantt-chart-area::-webkit-scrollbar-thumb {
+  background: #6366f1 !important;
+  border-radius: 6px !important;
+  border: 2px solid rgba(15, 23, 42, 0.85) !important;
+}
+
+.gantt-chart-area::-webkit-scrollbar-thumb:hover {
+  background: #818cf8 !important;
+}
+
+/* No-scrollbar utility for left table panel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 /* Crisp rendering */

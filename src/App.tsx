@@ -80,6 +80,9 @@ export default function App() {
     });
   }, [tasks, filter]);
 
+  // Horizontal scroll tracking
+  const [scrollProgress, setScrollProgress] = useState(0);
+
   // Synchronized Vertical Scrolling between Task Table and Gantt Chart
   const handleLeftScroll = () => {
     if (leftTableContainerRef.current && rightGanttContainerRef.current) {
@@ -90,6 +93,39 @@ export default function App() {
   const handleRightScroll = () => {
     if (leftTableContainerRef.current && rightGanttContainerRef.current) {
       leftTableContainerRef.current.scrollTop = rightGanttContainerRef.current.scrollTop;
+    }
+    if (rightGanttContainerRef.current) {
+      const maxScroll = rightGanttContainerRef.current.scrollWidth - rightGanttContainerRef.current.clientWidth;
+      if (maxScroll > 0) {
+        setScrollProgress((rightGanttContainerRef.current.scrollLeft / maxScroll) * 100);
+      }
+    }
+  };
+
+  const handleHorizontalPan = (delta: number) => {
+    if (rightGanttContainerRef.current) {
+      rightGanttContainerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  };
+
+  const handleScrollbarSlider = (valuePercent: number) => {
+    if (rightGanttContainerRef.current) {
+      const maxScroll = rightGanttContainerRef.current.scrollWidth - rightGanttContainerRef.current.clientWidth;
+      rightGanttContainerRef.current.scrollLeft = (valuePercent / 100) * maxScroll;
+      setScrollProgress(valuePercent);
+    }
+  };
+
+  const handleJumpToToday = () => {
+    if (rightGanttContainerRef.current) {
+      const todayEl = rightGanttContainerRef.current.querySelector('.today-indicator line');
+      if (todayEl) {
+        const x = parseFloat(todayEl.getAttribute('x1') || '0');
+        rightGanttContainerRef.current.scrollTo({
+          left: Math.max(0, x - rightGanttContainerRef.current.clientWidth / 2),
+          behavior: 'smooth',
+        });
+      }
     }
   };
 
@@ -197,7 +233,7 @@ export default function App() {
         <div
           ref={leftTableContainerRef}
           onScroll={handleLeftScroll}
-          className="shrink-0 overflow-y-auto overflow-x-hidden border-r transition-all"
+          className="shrink-0 overflow-y-auto overflow-x-hidden no-scrollbar border-r transition-all"
           style={{
             width: `${settings.gridWidth}px`,
             backgroundColor: theme.colors.bgSurface,
@@ -219,23 +255,77 @@ export default function App() {
           <div className="absolute inset-y-0 -left-1 -right-1" />
         </div>
 
-        {/* Right Gantt Chart Area */}
-        <div
-          ref={rightGanttContainerRef}
-          onScroll={handleRightScroll}
-          className="gantt-chart-area flex-1 overflow-auto relative"
-          style={{
-            backgroundColor: theme.colors.bgTimeline,
-          }}
-          onDoubleClick={() => {
-            if (selectedTaskId) setShowTaskDetailModal(true);
-          }}
-        >
-          <GanttChart
-            visibleTasks={visibleTasks}
-            scrollContainerRef={rightGanttContainerRef}
-            svgRef={svgRef}
-          />
+        {/* Right Gantt Chart Area + Dedicated Horizontal Scrollbar */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+          <div
+            ref={rightGanttContainerRef}
+            onScroll={handleRightScroll}
+            className="gantt-chart-area flex-1 min-w-0 min-h-0 overflow-x-auto overflow-y-auto relative"
+            style={{
+              backgroundColor: theme.colors.bgTimeline,
+            }}
+            onDoubleClick={() => {
+              if (selectedTaskId) setShowTaskDetailModal(true);
+            }}
+          >
+            <GanttChart
+              visibleTasks={visibleTasks}
+              scrollContainerRef={rightGanttContainerRef}
+              svgRef={svgRef}
+            />
+          </div>
+
+          {/* Integrated Horizontal Timeline Scrollbar Track */}
+          <div
+            className="h-9 border-t flex items-center justify-between px-3 shrink-0 select-none z-30"
+            style={{
+              backgroundColor: theme.colors.bgHeader,
+              borderColor: theme.colors.border,
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => handleHorizontalPan(-200)}
+                title="Desplazar a la izquierda"
+                className="px-2 py-0.5 rounded text-neutral-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
+              >
+                ◀
+              </button>
+              <button
+                onClick={handleJumpToToday}
+                className="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/30"
+                title="Centrar cronograma en el día de hoy"
+              >
+                Hoy
+              </button>
+            </div>
+
+            {/* Slider track representing horizontal timeline scrollbar */}
+            <div className="flex-1 mx-4 flex items-center gap-2 max-w-xl">
+              <span className="text-[10px] text-neutral-500 uppercase font-mono shrink-0">Inicio</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="0.5"
+                value={scrollProgress}
+                onChange={(e) => handleScrollbarSlider(parseFloat(e.target.value))}
+                className="w-full accent-blue-500 cursor-pointer h-2 bg-neutral-800 rounded-lg"
+                title="Barra de desplazamiento horizontal del cronograma"
+              />
+              <span className="text-[10px] text-neutral-500 uppercase font-mono shrink-0">Fin</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => handleHorizontalPan(200)}
+                title="Desplazar a la derecha"
+                className="px-2 py-0.5 rounded text-neutral-400 hover:text-white hover:bg-white/10 text-xs font-semibold"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Floating Legend Dock */}
