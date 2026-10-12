@@ -12,6 +12,9 @@ import { BaselineModal } from './components/modals/BaselineModal';
 import { BudgetModal } from './components/modals/BudgetModal';
 import { ImportModal } from './components/modals/ImportModal';
 import { ExportModal } from './components/modals/ExportModal';
+import { AboutModal } from './components/modals/AboutModal';
+import { NewProjectModal } from './components/modals/NewProjectModal';
+import { Footer } from './components/footer/Footer';
 
 export default function App() {
   const {
@@ -34,6 +37,9 @@ export default function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [aboutDefaultTab, setAboutDefaultTab] = useState<'overview' | 'instructions' | 'stack' | 'shortcuts'>('overview');
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [zenMode, setZenMode] = useState(false);
 
   // References for synchronized scrolling & exports
@@ -173,6 +179,8 @@ export default function App() {
         setShowBudgetModal(false);
         setShowImportModal(false);
         setShowExportModal(false);
+        setShowAboutModal(false);
+        setShowNewProjectModal(false);
       }
     };
 
@@ -220,6 +228,11 @@ export default function App() {
         onOpenBudget={() => setShowBudgetModal(true)}
         onOpenImport={() => setShowImportModal(true)}
         onOpenExport={() => setShowExportModal(true)}
+        onOpenNewProject={() => setShowNewProjectModal(true)}
+        onOpenAbout={() => {
+          setAboutDefaultTab('overview');
+          setShowAboutModal(true);
+        }}
         onToggleZenMode={() => setZenMode(!zenMode)}
         zenMode={zenMode}
       />
@@ -332,6 +345,16 @@ export default function App() {
         {settings.showLegend && <LegendPanel />}
       </main>
 
+      {/* 4. Footer */}
+      {!zenMode && (
+        <Footer
+          onOpenAbout={(tab) => {
+            setAboutDefaultTab(tab || 'overview');
+            setShowAboutModal(true);
+          }}
+        />
+      )}
+
       {/* Modals */}
       {showTaskDetailModal && selectedTaskId && (
         <TaskDetailModal
@@ -358,6 +381,17 @@ export default function App() {
           containerRef={appContainerRef}
           svgRef={svgRef}
         />
+      )}
+
+      {showAboutModal && (
+        <AboutModal
+          onClose={() => setShowAboutModal(false)}
+          defaultTab={aboutDefaultTab}
+        />
+      )}
+
+      {showNewProjectModal && (
+        <NewProjectModal onClose={() => setShowNewProjectModal(false)} />
       )}
     </div>
   );

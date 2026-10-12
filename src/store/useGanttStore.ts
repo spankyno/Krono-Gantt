@@ -63,6 +63,7 @@ interface GanttStoreState {
   // Interop
   importTasks: (tasks: Task[], replaceAll?: boolean) => void;
   resetToDemo: () => void;
+  startNewProject: (projectName?: string, mode?: 'blank' | 'starter') => void;
 
   // History actions
   undo: () => void;
@@ -558,6 +559,127 @@ export const useGanttStore = create<GanttStoreState>((set, get) => ({
       resources: INITIAL_RESOURCES,
       baselines: INITIAL_BASELINES,
       settings: DEFAULT_SETTINGS,
+    });
+  },
+
+  startNewProject: (projectName = 'Nuevo Proyecto', mode = 'starter') => {
+    const currentTasks = get().tasks;
+    const today = new Date().toISOString().substring(0, 10);
+
+    let newTasks: Task[] = [];
+    if (mode === 'blank') {
+      newTasks = [
+        {
+          id: `task-${Date.now()}-1`,
+          name: 'Primera Tarea del Proyecto',
+          startDate: today,
+          endDate: addDays(today, 5),
+          duration: 5,
+          progress: 0,
+          priority: 'medium',
+          status: 'todo',
+          type: 'task',
+          dependencies: [],
+          order: 0,
+          budget: 1000,
+        },
+      ];
+    } else {
+      // Clean starter template with Phase 1 and 2 tasks + 1 milestone
+      const t1 = `task-${Date.now()}-1`;
+      const t2 = `task-${Date.now()}-2`;
+      const t3 = `task-${Date.now()}-3`;
+      const t4 = `task-${Date.now()}-4`;
+
+      newTasks = [
+        {
+          id: t1,
+          name: 'Fase 1: Planificación y Kickoff',
+          startDate: today,
+          endDate: addDays(today, 12),
+          duration: 12,
+          progress: 0,
+          status: 'todo',
+          priority: 'high',
+          type: 'group',
+          isExpanded: true,
+          dependencies: [],
+          order: 0,
+          budget: 3500,
+        },
+        {
+          id: t2,
+          name: 'Definición de requerimientos y alcance',
+          startDate: today,
+          endDate: addDays(today, 5),
+          duration: 5,
+          progress: 0,
+          status: 'todo',
+          priority: 'high',
+          type: 'task',
+          parentId: t1,
+          dependencies: [],
+          order: 1,
+          estimatedHours: 40,
+          actualHours: 0,
+          budget: 1500,
+        },
+        {
+          id: t3,
+          name: 'Diseño de la solución y prototipo inicial',
+          startDate: addDays(today, 5),
+          endDate: addDays(today, 12),
+          duration: 7,
+          progress: 0,
+          status: 'todo',
+          priority: 'medium',
+          type: 'task',
+          parentId: t1,
+          dependencies: [t2],
+          order: 2,
+          estimatedHours: 48,
+          actualHours: 0,
+          budget: 2000,
+        },
+        {
+          id: t4,
+          name: 'Hito: Aprobación del Plan de Trabajo',
+          startDate: addDays(today, 12),
+          endDate: addDays(today, 12),
+          duration: 0,
+          progress: 0,
+          status: 'todo',
+          priority: 'urgent',
+          type: 'milestone',
+          parentId: t1,
+          dependencies: [t3],
+          order: 3,
+        },
+      ];
+    }
+
+    const updatedSettings = {
+      ...get().settings,
+      activeBaselineId: null,
+      showGhostMode: false,
+    };
+
+    set((state) => ({
+      tasks: newTasks,
+      baselines: [],
+      settings: updatedSettings,
+      selectedTaskId: newTasks[0]?.id || null,
+      past: [...state.past.slice(-25), { tasks: currentTasks }],
+      future: [],
+      canUndo: true,
+      canRedo: false,
+    }));
+
+    saveToLocalStorage({
+      tasks: newTasks,
+      resources: get().resources,
+      baselines: [],
+      settings: updatedSettings,
     });
   },
 

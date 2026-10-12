@@ -26,6 +26,8 @@ import {
   RefreshCw,
   Eye,
   Check,
+  FolderPlus,
+  Info,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -34,6 +36,8 @@ interface ToolbarProps {
   onOpenImport: () => void;
   onOpenExport: () => void;
   onToggleZenMode: () => void;
+  onOpenNewProject: () => void;
+  onOpenAbout: () => void;
   zenMode: boolean;
 }
 
@@ -43,6 +47,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onOpenImport,
   onOpenExport,
   onToggleZenMode,
+  onOpenNewProject,
+  onOpenAbout,
   zenMode,
 }) => {
   const {
@@ -117,6 +123,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
           <Plus className="w-4 h-4" />
           <span>Añadir Tarea</span>
+        </button>
+
+        {/* New Project Button */}
+        <button
+          onClick={onOpenNewProject}
+          title="Iniciar un nuevo proyecto limpio o con plantilla"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-200 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 transition-colors shadow-sm"
+        >
+          <FolderPlus className="w-4 h-4 text-purple-400" />
+          <span className="hidden sm:inline">Nuevo Proyecto</span>
         </button>
 
         {/* Undo / Redo */}
@@ -483,6 +499,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </div>
           )}
         </div>
+
+        {/* About / Info Button */}
+        <button
+          onClick={onOpenAbout}
+          title="Acerca de KronoGantt (Funcionalidades, Instrucciones y Stack)"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <Info className="w-4 h-4 text-blue-400" />
+        </button>
 
         {/* Zen Mode / Fullscreen Toggle */}
         <button
