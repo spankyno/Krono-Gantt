@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 export interface ExportOptions {
@@ -10,66 +10,8 @@ export interface ExportOptions {
 }
 
 /**
- * Helper to convert any modern CSS color (like oklch) into standard rgb/rgba
- * using a canvas 2D context which natively resolves the color.
- */
-function convertColorToRgb(color: string): string {
-  if (!color || !color.includes('oklch')) return color;
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#000000';
-      ctx.fillStyle = color;
-      return ctx.fillStyle; // Browser returns rgb(...) or #hex
-    }
-  } catch (e) {
-    // fallback
-  }
-  return '#6366f1';
-}
-
-/**
- * Sanitizes an element and all style tags inside a cloned document to remove
- * or convert unsupported modern CSS functions (like oklch) before html2canvas parses them.
- */
-function sanitizeClonedDocumentForHtml2Canvas(clonedDoc: Document): void {
-  const oklchRegex = /oklch\([^)]+\)/gi;
-
-  // 1. Replace oklch in all <style> tag contents
-  const styleTags = clonedDoc.querySelectorAll('style');
-  styleTags.forEach((styleEl) => {
-    if (styleEl.textContent && styleEl.textContent.includes('oklch')) {
-      styleEl.textContent = styleEl.textContent.replace(oklchRegex, (match) => {
-        return convertColorToRgb(match);
-      });
-    }
-  });
-
-  // 2. Remove external linked stylesheets that might contain raw oklch,
-  // or inline their safe converted rules
-  const linkTags = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-  linkTags.forEach((link) => {
-    // Avoid cross-origin stylesheet parsing crashes
-    link.setAttribute('crossorigin', 'anonymous');
-  });
-
-  // 3. Clean up computed inline styles on all cloned nodes
-  const allElements = clonedDoc.querySelectorAll('*');
-  allElements.forEach((el) => {
-    const htmlEl = el as HTMLElement;
-    const styleAttr = htmlEl.getAttribute('style');
-    if (styleAttr && styleAttr.includes('oklch')) {
-      htmlEl.setAttribute('style', styleAttr.replace(oklchRegex, (m) => convertColorToRgb(m)));
-    }
-  });
-}
-
-/**
- * Direct SVG-to-Canvas rasterizer for pure Gantt chart exports
- * bypasses html2canvas completely for 100% precision and speed.
+ * Direct SVG-to-Canvas rasterizer for pure Gantt chart exports.
+ * 100% native vector drawing into Canvas 2D, zero CSS parser dependencies.
  */
 async function rasterizeSvgToCanvas(
   svgElement: SVGSVGElement,
@@ -80,7 +22,7 @@ async function rasterizeSvgToCanvas(
   svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
 
-  const width = parseFloat(svgElement.getAttribute('width') || String(svgElement.clientWidth || 1200));
+  const width = parseFloat(svgElement.getAttribute('width') || String(svgElement.clientWidth || 1400));
   const height = parseFloat(svgElement.getAttribute('height') || String(svgElement.clientHeight || 800));
 
   svgClone.setAttribute('width', String(width));
@@ -93,13 +35,13 @@ async function rasterizeSvgToCanvas(
   const img = new Image();
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
-    img.onerror = (e) => reject(new Error('Error rasterizando el elemento SVG'));
+    img.onerror = () => reject(new Error('Error rasterizando el SVG del cronograma'));
     img.src = url;
   });
 
   const canvas = document.createElement('canvas');
-  canvas.width = width * scale;
-  canvas.height = height * scale;
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
   const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
 
@@ -111,6 +53,38 @@ async function rasterizeSvgToCanvas(
   return canvas;
 }
 
+/**
+ * Captures an HTML element to an HTML5 Canvas using html-to-image.
+ * html-to-image uses browser-native SVG foreignObject and natively supports oklch, flexbox, and modern CSS.
+ */
+async function captureElementToCanvas(
+  element: HTMLElement,
+  scale: number = 2,
+  bgColor: string = '#0d1117'
+): Promise<HTMLCanvasElement> {
+  const canvas = await htmlToImage.toCanvas(element, {
+    pixelRatio: scale,
+    backgroundColor: bgColor,
+    skipAutoScale: false,
+    cacheBust: true,
+    filter: (node) => {
+      // Exclude modals, toasts, or scrollbar handles if they shouldn't appear
+      if (node instanceof HTMLElement) {
+        if (
+          node.classList.contains('fixed') ||
+          node.classList.contains('z-50') ||
+          node.getAttribute('role') === 'dialog'
+        ) {
+          return false;
+        }
+      }
+      return true;
+    },
+  });
+
+  return canvas;
+}
+
 export async function exportGanttView(
   containerElement: HTMLElement,
   svgElement: SVGSVGElement | null,
@@ -119,7 +93,7 @@ export async function exportGanttView(
   const filename = options.filename || `KronoGantt_${new Date().toISOString().substring(0, 10)}`;
   const bgColor = options.themeMode === 'light' ? '#FFFFFF' : '#0B0F17';
 
-  // 1. Export as Native SVG
+  // 1. Native Vector SVG Export
   if (options.format === 'svg') {
     if (!svgElement) {
       throw new Error('No se encontró el elemento SVG para la exportación.');
@@ -142,29 +116,22 @@ export async function exportGanttView(
     return;
   }
 
-  // 2. Export as PNG / JPG / PDF
+  // 2. High Resolution Image / PDF Export
   let canvas: HTMLCanvasElement;
 
   if (!options.includeSidebar && svgElement) {
-    // Pure Gantt chart export via direct SVG rasterizer (crisp, zero oklch issues)
+    // Pure Gantt chart export via direct native SVG rasterizer
     canvas = await rasterizeSvgToCanvas(svgElement, 2, bgColor);
   } else {
-    // Full view export via html2canvas with oklch sanitizer
-    canvas = await html2canvas(containerElement, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: bgColor,
-      logging: false,
-      scrollX: 0,
-      scrollY: 0,
-      onclone: (clonedDoc) => {
-        sanitizeClonedDocumentForHtml2Canvas(clonedDoc);
-      },
-    });
+    // Gantt + Task Table export via html-to-image (native foreignObject, 100% oklch compatible)
+    // Find the main workspace container if containerElement is the entire page
+    const workspaceElement =
+      containerElement.querySelector('main') || containerElement;
+
+    canvas = await captureElementToCanvas(workspaceElement as HTMLElement, 2, bgColor);
   }
 
-  // Output formatting
+  // 3. Format Output
   if (options.format === 'png' || options.format === 'jpg') {
     const mimeType = options.format === 'png' ? 'image/png' : 'image/jpeg';
     const dataUrl = canvas.toDataURL(mimeType, options.quality || 0.95);

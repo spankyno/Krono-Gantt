@@ -12,6 +12,7 @@ import {
   FileCode,
   FileSpreadsheet,
   CheckCircle,
+  AlertCircle,
   Loader2,
   Sparkles,
 } from 'lucide-react';
@@ -30,10 +31,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, containerRef,
   const [includeSidebar, setIncludeSidebar] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleExport = async () => {
     setIsExporting(true);
     setSuccessMessage(null);
+    setErrorMessage(null);
 
     try {
       if (format === 'msproject') {
@@ -77,7 +80,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, containerRef,
       await exportGanttView(targetElement, svgRef.current, options);
       setSuccessMessage(`¡Exportación a ${format.toUpperCase()} completada!`);
     } catch (err: any) {
-      alert(`Error durante la exportación: ${err.message}`);
+      setErrorMessage(`Error durante la exportación: ${err.message || err}`);
     } finally {
       setIsExporting(false);
     }
@@ -156,6 +159,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, containerRef,
             <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-xs flex items-center gap-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span>{successMessage}</span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="p-3.5 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
