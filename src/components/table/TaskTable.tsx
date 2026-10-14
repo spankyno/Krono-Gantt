@@ -9,7 +9,6 @@ import {
   Plus,
   Trash2,
   Copy,
-  
   AlertTriangle,
   Flag,
 } from 'lucide-react';

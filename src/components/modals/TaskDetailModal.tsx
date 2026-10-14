@@ -6,10 +6,7 @@ import { calculateTaskCost, formatCurrency } from '../../utils/costUtils';
 import { isValidISODate } from '../../utils/dateUtils';
 import {
   X,
-  
   DollarSign,
-  
-  
   Link,
   Trash2,
   AlertTriangle,

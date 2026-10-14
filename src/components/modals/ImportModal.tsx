@@ -9,7 +9,6 @@ import {
   Upload,
   FileSpreadsheet,
   FileCode,
-  
   AlertCircle,
   ArrowRight,
 } from 'lucide-react';

@@ -6,12 +6,7 @@ import {
   X,
   Ghost,
   Camera,
-  
-  
   Trash2,
-  
-  
-  
   Eye,
   EyeOff,
 } from 'lucide-react';

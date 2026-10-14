@@ -16,15 +16,10 @@ import {
   Moon,
   RotateCcw,
   RotateCw,
-  
-  
-  
   Palette,
   Sliders,
   Plus,
-  
   RefreshCw,
-  
   Check,
   FolderPlus,
   Info,

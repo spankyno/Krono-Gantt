@@ -4,10 +4,8 @@ import { getTheme, STATUS_LABELS, } from '../../utils/themeUtils';
 import { calculateProjectBudgetSummary, formatCurrency } from '../../utils/costUtils';
 import {
   Search,
-  
   X,
   AlertTriangle,
-  
   CheckCircle2,
   DollarSign,
 } from 'lucide-react';

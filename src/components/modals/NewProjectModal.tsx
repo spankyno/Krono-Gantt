@@ -6,7 +6,6 @@ import {
   X,
   FilePlus2,
   Sparkles,
-  
   ArrowRight,
   AlertCircle,
 } from 'lucide-react';

@@ -5,9 +5,7 @@ import { calculateProjectBudgetSummary, formatCurrency } from '../../utils/costU
 import {
   X,
   DollarSign,
-  
   AlertTriangle,
-  
   Plus,
   Trash2,
   Calendar,

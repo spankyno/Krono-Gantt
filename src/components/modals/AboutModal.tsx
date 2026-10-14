@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useGanttStore } from '../../store/useGanttStore';
 import { getTheme } from '../../utils/themeUtils';
+import { AUTHOR } from '../../data/author';
 import {
   X,
-  
-  
   Code2,
   BookOpen,
   Keyboard,
@@ -12,28 +11,35 @@ import {
   Ghost,
   DollarSign,
   Upload,
-  
-  
-  
   MousePointer,
-  
-  
-  
-  
-  
   ShieldCheck,
+  User,
+  Info,
+  Mail,
+  Rss,
+  LayoutGrid,
+  ExternalLink,
 } from 'lucide-react';
+
+export type AboutTab = 'overview' | 'instructions' | 'stack' | 'shortcuts' | 'author';
+
+const AUTHOR_LINK_ICONS = {
+  about: Info,
+  contact: Mail,
+  blog: Rss,
+  apps: LayoutGrid,
+} as const;
 
 interface AboutModalProps {
   onClose: () => void;
-  defaultTab?: 'overview' | 'instructions' | 'stack' | 'shortcuts';
+  defaultTab?: AboutTab;
 }
 
 export const AboutModal: React.FC<AboutModalProps> = ({ onClose, defaultTab = 'overview' }) => {
   const { settings } = useGanttStore();
   const theme = getTheme(settings.colorMode, settings.themePalette);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'instructions' | 'stack' | 'shortcuts'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<AboutTab>(defaultTab);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
@@ -84,12 +90,13 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, defaultTab = 'o
             { id: 'instructions', label: 'Instrucciones de Uso', icon: <BookOpen className="w-3.5 h-3.5" /> },
             { id: 'stack', label: 'Stack Tecnológico', icon: <Code2 className="w-3.5 h-3.5" /> },
             { id: 'shortcuts', label: 'Atajos de Teclado', icon: <Keyboard className="w-3.5 h-3.5" /> },
+            { id: 'author', label: 'Autor', icon: <User className="w-3.5 h-3.5" /> },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as AboutTab)}
                 className={`flex items-center gap-2 py-3 px-3.5 border-b-2 font-semibold transition-all whitespace-nowrap ${
                   isActive
                     ? 'border-blue-500 text-white'
@@ -325,6 +332,47 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, defaultTab = 'o
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* TAB 5: AUTOR */}
+          {activeTab === 'author' && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                  <User className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">{AUTHOR.name}</h3>
+                  <p className="text-neutral-400">Autor y desarrollador de KronoGantt</p>
+                </div>
+              </div>
+
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {AUTHOR.links.map((link) => {
+                  const Icon = AUTHOR_LINK_ICONS[link.id];
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.href}
+                      {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : { target: '_blank' })}
+                      className="flex items-center gap-3 p-3.5 rounded-xl border bg-black/10 hover:bg-white/5 transition-colors group"
+                      style={{ borderColor: theme.colors.border }}
+                    >
+                      <Icon className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-white">{link.label}</span>
+                        <span className="block text-[11px] text-neutral-400 truncate">{link.description}</span>
+                      </span>
+                      <ExternalLink className="w-3.5 h-3.5 text-neutral-500 group-hover:text-neutral-300 shrink-0" />
+                    </a>
+                  );
+                })}
+              </div>
+
+              <p className="pt-4 border-t text-[11px] text-neutral-400" style={{ borderColor: theme.colors.border }}>
+                {AUTHOR.copyright}
+              </p>
             </div>
           )}
         </div>

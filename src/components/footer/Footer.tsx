@@ -6,7 +6,6 @@ import {
   BookOpen,
   Keyboard,
   Code2,
-  
   Layers,
 } from 'lucide-react';
 
