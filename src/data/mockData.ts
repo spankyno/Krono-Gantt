@@ -7,7 +7,6 @@ export const INITIAL_RESOURCES: Resource[] = [
     role: 'Lead UX / Product Designer',
     hourlyRate: 65,
     color: '#EC4899',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces',
   },
   {
     id: 'res-2',
@@ -15,7 +14,6 @@ export const INITIAL_RESOURCES: Resource[] = [
     role: 'Senior Tech Lead & Cloud',
     hourlyRate: 85,
     color: '#3B82F6',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces',
   },
   {
     id: 'res-3',
@@ -23,7 +21,6 @@ export const INITIAL_RESOURCES: Resource[] = [
     role: 'Frontend Systems Specialist',
     hourlyRate: 70,
     color: '#10B981',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
   },
   {
     id: 'res-4',
@@ -31,7 +28,6 @@ export const INITIAL_RESOURCES: Resource[] = [
     role: 'QA Automation Engineer',
     hourlyRate: 55,
     color: '#F59E0B',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=faces',
   },
 ];
 

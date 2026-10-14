@@ -1,6 +1,14 @@
 import { ViewMode } from '../types/gantt';
 
-export function parseISODate(dateStr: string): Date {
+/** Ventana de fechas admitida (evita fechas absurdas que bloquearían el render). */
+export const MIN_ISO_DATE = '2000-01-01';
+export const MAX_ISO_DATE = '2100-12-31';
+/** Máximo de días que se dibujan en el timeline (protege frente a rangos enormes). */
+export const MAX_TIMELINE_DAYS = 5000;
+
+const DAY_MS = 86_400_000;
+
+function parseISODate(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
 }
@@ -10,6 +18,13 @@ export function formatISODate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** true si es 'YYYY-MM-DD', una fecha real del calendario y está dentro de la ventana admitida. */
+export function isValidISODate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (value < MIN_ISO_DATE || value > MAX_ISO_DATE) return false;
+  return formatISODate(parseISODate(value)) === value; // descarta 2026-02-31, etc.
 }
 
 export function addDays(dateStr: string, days: number): string {
@@ -22,18 +37,14 @@ export function diffDays(startDateStr: string, endDateStr: string): number {
   const start = parseISODate(startDateStr);
   const end = parseISODate(endDateStr);
   const diffTime = end.getTime() - start.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  return Math.round(diffTime / DAY_MS);
 }
 
-export function isNonWorkingDay(date: Date, nonWorkingDays: number[] = [0, 6]): boolean {
-  return nonWorkingDays.includes(date.getDay());
-}
-
-export function getTodayISO(): string {
+function getTodayISO(): string {
   return formatISODate(new Date());
 }
 
-export interface TimelineInterval {
+interface TimelineInterval {
   id: string;
   startDate: Date;
   endDate: Date;
@@ -115,6 +126,36 @@ export function calculateTimelineRange(
   return { startDate: start, endDate: end };
 }
 
+/** Agrupa los días del rango por mes (cabecera superior de las vistas día y semana). */
+function buildMonthHeader(startDate: Date, totalDays: number, pxPerDay: number): TimelineInterval[] {
+  const months: TimelineInterval[] = [];
+  const day = new Date(startDate);
+  let current: TimelineInterval | null = null;
+  let currentMonth = -1;
+  let currentYear = 0;
+
+  for (let i = 0; i < totalDays; i++) {
+    const month = day.getMonth();
+    if (month !== currentMonth) {
+      currentMonth = month;
+      currentYear = day.getFullYear();
+      current = {
+        id: `month-${currentYear}-${month}`,
+        startDate: new Date(currentYear, month, 1),
+        endDate: new Date(currentYear, month + 1, 0),
+        label: `${MONTH_NAMES_ES[month]} ${currentYear}`,
+        left: i * pxPerDay,
+        width: pxPerDay,
+      };
+      months.push(current);
+    } else {
+      current!.width += pxPerDay;
+    }
+    day.setDate(day.getDate() + 1);
+  }
+  return months;
+}
+
 export function generateTimelineHeader(
   startDate: Date,
   endDate: Date,
@@ -122,76 +163,31 @@ export function generateTimelineHeader(
   columnWidth: number,
   nonWorkingDays: number[] = [0, 6]
 ): TimelineHeaderData {
-  const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-  const primaryHeader: TimelineInterval[] = [];
+  const rawDays = Math.ceil((endDate.getTime() - startDate.getTime()) / DAY_MS);
+  const totalDays = Number.isFinite(rawDays) ? Math.min(MAX_TIMELINE_DAYS, Math.max(1, rawDays)) : 1;
   const secondaryHeader: TimelineInterval[] = [];
 
-  const todayStr = getTodayISO();
-
   if (viewMode === 'day') {
-    // Top: Months/Years, Bottom: Individual days
-    let currentDay = new Date(startDate);
-    let currentMonthIndex = -1;
-    let currentMonthStartLeft = 0;
-    let currentMonthWidth = 0;
-    let currentMonthYear = 0;
-
+    // Arriba: meses · Abajo: días
+    const todayStr = getTodayISO();
+    const day = new Date(startDate);
     for (let i = 0; i < totalDays; i++) {
-      const left = i * columnWidth;
-      const dayDateStr = formatISODate(currentDay);
-      const dayOfWeek = currentDay.getDay();
-      const monthIndex = currentDay.getMonth();
-      const year = currentDay.getFullYear();
-      const isWeekend = nonWorkingDays.includes(dayOfWeek);
-
+      const dayOfWeek = day.getDay();
       secondaryHeader.push({
-        id: `day-${dayDateStr}`,
-        startDate: new Date(currentDay),
-        endDate: new Date(currentDay),
-        label: `${currentDay.getDate()}`,
+        id: `day-${formatISODate(day)}`,
+        startDate: new Date(day),
+        endDate: new Date(day),
+        label: `${day.getDate()}`,
         subLabel: DAY_NAMES_SHORT[dayOfWeek],
-        isToday: dayDateStr === todayStr,
-        isWeekend,
-        left,
+        isToday: formatISODate(day) === todayStr,
+        isWeekend: nonWorkingDays.includes(dayOfWeek),
+        left: i * columnWidth,
         width: columnWidth,
       });
-
-      if (monthIndex !== currentMonthIndex) {
-        if (currentMonthIndex !== -1) {
-          primaryHeader.push({
-            id: `month-${currentMonthYear}-${currentMonthIndex}`,
-            startDate: new Date(currentMonthYear, currentMonthIndex, 1),
-            endDate: new Date(currentMonthYear, currentMonthIndex + 1, 0),
-            label: `${MONTH_NAMES_ES[currentMonthIndex]} ${currentMonthYear}`,
-            left: currentMonthStartLeft,
-            width: currentMonthWidth,
-          });
-        }
-        currentMonthIndex = monthIndex;
-        currentMonthYear = year;
-        currentMonthStartLeft = left;
-        currentMonthWidth = columnWidth;
-      } else {
-        currentMonthWidth += columnWidth;
-      }
-
-      currentDay.setDate(currentDay.getDate() + 1);
+      day.setDate(day.getDate() + 1);
     }
-
-    // Push the final month
-    if (currentMonthIndex !== -1) {
-      primaryHeader.push({
-        id: `month-${currentMonthYear}-${currentMonthIndex}`,
-        startDate: new Date(currentMonthYear, currentMonthIndex, 1),
-        endDate: new Date(currentMonthYear, currentMonthIndex + 1, 0),
-        label: `${MONTH_NAMES_ES[currentMonthIndex]} ${currentMonthYear}`,
-        left: currentMonthStartLeft,
-        width: currentMonthWidth,
-      });
-    }
-
     return {
-      primaryHeader,
+      primaryHeader: buildMonthHeader(startDate, totalDays, columnWidth),
       secondaryHeader,
       totalWidth: totalDays * columnWidth,
       startDate,
@@ -201,75 +197,25 @@ export function generateTimelineHeader(
   }
 
   if (viewMode === 'week') {
-    // Top: Months, Bottom: Weeks (Semana N o rango)
-    const pxPerDay = columnWidth / 7;
-    let currentDay = new Date(startDate);
-    let currentMonthIndex = -1;
-    let currentMonthStartLeft = 0;
-    let currentMonthWidth = 0;
-    let currentMonthYear = 0;
-
+    // Arriba: meses · Abajo: semanas
     const weeksCount = Math.ceil(totalDays / 7);
-
     for (let w = 0; w < weeksCount; w++) {
       const weekStart = new Date(startDate);
       weekStart.setDate(weekStart.getDate() + w * 7);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
-
-      const left = w * columnWidth;
       secondaryHeader.push({
         id: `week-${w}`,
         startDate: weekStart,
         endDate: weekEnd,
         label: `S${w + 1}`,
         subLabel: `${weekStart.getDate()} ${MONTH_NAMES_SHORT[weekStart.getMonth()]}`,
-        left,
+        left: w * columnWidth,
         width: columnWidth,
       });
     }
-
-    // Months
-    for (let i = 0; i < totalDays; i++) {
-      const left = i * pxPerDay;
-      const monthIndex = currentDay.getMonth();
-      const year = currentDay.getFullYear();
-
-      if (monthIndex !== currentMonthIndex) {
-        if (currentMonthIndex !== -1) {
-          primaryHeader.push({
-            id: `month-${currentMonthYear}-${currentMonthIndex}`,
-            startDate: new Date(currentMonthYear, currentMonthIndex, 1),
-            endDate: new Date(currentMonthYear, currentMonthIndex + 1, 0),
-            label: `${MONTH_NAMES_ES[currentMonthIndex]} ${currentMonthYear}`,
-            left: currentMonthStartLeft,
-            width: currentMonthWidth,
-          });
-        }
-        currentMonthIndex = monthIndex;
-        currentMonthYear = year;
-        currentMonthStartLeft = left;
-        currentMonthWidth = pxPerDay;
-      } else {
-        currentMonthWidth += pxPerDay;
-      }
-
-      currentDay.setDate(currentDay.getDate() + 1);
-    }
-
-    if (currentMonthIndex !== -1) {
-      primaryHeader.push({
-        id: `month-${currentMonthYear}-${currentMonthIndex}`,
-        startDate: new Date(currentMonthYear, currentMonthIndex, 1),
-        endDate: new Date(currentMonthYear, currentMonthIndex + 1, 0),
-        label: `${MONTH_NAMES_ES[currentMonthIndex]} ${currentMonthYear}`,
-        left: currentMonthStartLeft,
-        width: currentMonthWidth,
-      });
-    }
-
     return {
-      primaryHeader,
+      primaryHeader: buildMonthHeader(startDate, totalDays, columnWidth / 7),
       secondaryHeader,
       totalWidth: weeksCount * columnWidth,
       startDate,
@@ -278,68 +224,46 @@ export function generateTimelineHeader(
     };
   }
 
-  // Month or Quarter mode
+  // Mes / Trimestre — Arriba: años · Abajo: meses
   const pxPerDay = columnWidth / 30;
-  let currentMonth = new Date(startDate);
-  currentMonth.setDate(1);
+  const maxMonths = Math.ceil(MAX_TIMELINE_DAYS / 28) + 1;
+  const primaryHeader: TimelineInterval[] = [];
+  const cursor = new Date(startDate);
+  cursor.setDate(1);
 
-  let currentYear = -1;
-  let currentYearStartLeft = 0;
-  let currentYearWidth = 0;
-  let mIndex = 0;
-
-  while (currentMonth <= endDate) {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const nextMonth = new Date(year, month + 1, 1);
-    const daysInMonth = Math.round((nextMonth.getTime() - currentMonth.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Day offset from timeline start
-    const diffFromStart = Math.max(0, Math.round((currentMonth.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-    const left = diffFromStart * pxPerDay;
+  let year: TimelineInterval | null = null;
+  while (cursor <= endDate && secondaryHeader.length < maxMonths) {
+    const y = cursor.getFullYear();
+    const m = cursor.getMonth();
+    const next = new Date(y, m + 1, 1);
+    const daysInMonth = Math.round((next.getTime() - cursor.getTime()) / DAY_MS);
+    const left = Math.max(0, Math.round((cursor.getTime() - startDate.getTime()) / DAY_MS)) * pxPerDay;
     const width = daysInMonth * pxPerDay;
 
     secondaryHeader.push({
-      id: `m-${year}-${month}`,
-      startDate: new Date(currentMonth),
-      endDate: new Date(year, month + 1, 0),
-      label: MONTH_NAMES_SHORT[month],
-      subLabel: `${year}`,
+      id: `m-${y}-${m}`,
+      startDate: new Date(cursor),
+      endDate: new Date(y, m + 1, 0),
+      label: MONTH_NAMES_SHORT[m],
+      subLabel: `${y}`,
       left,
       width,
     });
 
-    if (year !== currentYear) {
-      if (currentYear !== -1) {
-        primaryHeader.push({
-          id: `year-${currentYear}`,
-          startDate: new Date(currentYear, 0, 1),
-          endDate: new Date(currentYear, 11, 31),
-          label: `${currentYear}`,
-          left: currentYearStartLeft,
-          width: currentYearWidth,
-        });
-      }
-      currentYear = year;
-      currentYearStartLeft = left;
-      currentYearWidth = width;
+    if (year && year.id === `year-${y}`) {
+      year.width += width;
     } else {
-      currentYearWidth += width;
+      year = {
+        id: `year-${y}`,
+        startDate: new Date(y, 0, 1),
+        endDate: new Date(y, 11, 31),
+        label: `${y}`,
+        left,
+        width,
+      };
+      primaryHeader.push(year);
     }
-
-    currentMonth = nextMonth;
-    mIndex++;
-  }
-
-  if (currentYear !== -1) {
-    primaryHeader.push({
-      id: `year-${currentYear}`,
-      startDate: new Date(currentYear, 0, 1),
-      endDate: new Date(currentYear, 11, 31),
-      label: `${currentYear}`,
-      left: currentYearStartLeft,
-      width: currentYearWidth,
-    });
+    cursor.setTime(next.getTime());
   }
 
   return {
@@ -359,7 +283,7 @@ export function dateToCoordinate(
   columnWidth: number
 ): number {
   const target = parseISODate(dateStr);
-  const diffDaysFromStart = (target.getTime() - timelineStartDate.getTime()) / (1000 * 60 * 60 * 24);
+  const diffDaysFromStart = (target.getTime() - timelineStartDate.getTime()) / DAY_MS;
 
   if (viewMode === 'day') {
     return diffDaysFromStart * columnWidth;

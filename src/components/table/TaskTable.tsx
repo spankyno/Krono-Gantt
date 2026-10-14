@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Task, Resource, TaskStatus, TaskPriority, TaskType } from '../../types/gantt';
+import { Task, TaskStatus, } from '../../types/gantt';
 import { useGanttStore } from '../../store/useGanttStore';
-import { getTheme, STATUS_LABELS, PRIORITY_LABELS, PRIORITY_COLORS } from '../../utils/themeUtils';
+import { getTheme, } from '../../utils/themeUtils';
 import { calculateTaskCost, formatCurrency } from '../../utils/costUtils';
 import {
   ChevronDown,
@@ -9,13 +9,9 @@ import {
   Plus,
   Trash2,
   Copy,
-  Calendar,
+  
   AlertTriangle,
   Flag,
-  Folder,
-  CheckCircle2,
-  Clock,
-  MoreHorizontal,
 } from 'lucide-react';
 
 interface TaskTableProps {
@@ -24,7 +20,6 @@ interface TaskTableProps {
 
 export const TaskTable: React.FC<TaskTableProps> = ({ visibleTasks }) => {
   const {
-    tasks,
     resources,
     settings,
     selectedTaskId,
@@ -87,7 +82,6 @@ export const TaskTable: React.FC<TaskTableProps> = ({ visibleTasks }) => {
       <div className="flex flex-col">
         {visibleTasks.map((task, index) => {
           const isSelected = selectedTaskId === task.id;
-          const resource = resources.find((r) => r.id === task.assigneeId);
           const cost = calculateTaskCost(task, resources);
           const isGroup = task.type === 'group';
           const isMilestone = task.type === 'milestone';

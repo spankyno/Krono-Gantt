@@ -25,7 +25,6 @@ export interface Task {
   fixedCost?: number;
   budget?: number;
   notes?: string;
-  tags?: string[];
   order: number;
 }
 
@@ -33,7 +32,6 @@ export interface Resource {
   id: string;
   name: string;
   role: string;
-  avatar?: string;
   hourlyRate: number;
   color: string;
 }
@@ -68,21 +66,16 @@ export interface GanttSettings {
   rowHeight: number;   // height in px per task row
   showGhostMode: boolean;
   activeBaselineId: string | null;
-  showCriticalPath: boolean;
   showDependencies: boolean;
-  showProgressBars: boolean;
   showNonWorkingDays: boolean;
   nonWorkingDays: number[]; // 0 = Sunday, 6 = Saturday
   snapToGrid: boolean;
   themePalette: ThemePalette;
   colorMode: ColorMode;
   fontFamily: FontFamily;
-  fontSize: 'sm' | 'md' | 'lg';
   showCostColumns: boolean;
   showLegend: boolean;
-  zenMode: boolean;
   gridWidth: number; // Width of left task table panel
-  compactMode: boolean;
 }
 
 export interface FilterState {
@@ -101,5 +94,4 @@ export interface DragState {
   initialDuration: number;
   initialProgress: number;
   currentX: number;
-  targetDependencyTaskId?: string;
 }

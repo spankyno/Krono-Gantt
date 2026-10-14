@@ -1,5 +1,3 @@
-import * as htmlToImage from 'html-to-image';
-import { jsPDF } from 'jspdf';
 
 export interface ExportOptions {
   format: 'png' | 'jpg' | 'svg' | 'pdf';
@@ -7,6 +5,18 @@ export interface ExportOptions {
   quality?: number;
   filename?: string;
   themeMode?: 'dark' | 'light';
+}
+
+/** Descarga un Blob/URL. La URL se libera con retraso: revocarla al instante cancela la descarga en algunos navegadores. */
+export function downloadBlob(source: Blob | string, filename: string): void {
+  const url = typeof source === 'string' ? source : URL.createObjectURL(source);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  if (typeof source !== 'string') setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**
@@ -62,6 +72,8 @@ async function captureElementToCanvas(
   scale: number = 2,
   bgColor: string = '#0d1117'
 ): Promise<HTMLCanvasElement> {
+  // html-to-image se carga bajo demanda
+  const htmlToImage = await import('html-to-image');
   const canvas = await htmlToImage.toCanvas(element, {
     pixelRatio: scale,
     backgroundColor: bgColor,
@@ -104,15 +116,7 @@ export async function exportGanttView(
 
     const svgData = new XMLSerializer().serializeToString(svgClone);
     const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `${filename}.svg`);
     return;
   }
 
@@ -135,16 +139,12 @@ export async function exportGanttView(
   if (options.format === 'png' || options.format === 'jpg') {
     const mimeType = options.format === 'png' ? 'image/png' : 'image/jpeg';
     const dataUrl = canvas.toDataURL(mimeType, options.quality || 0.95);
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `${filename}.${options.format}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    downloadBlob(dataUrl, `${filename}.${options.format}`);
     return;
   }
 
   if (options.format === 'pdf') {
+    const { jsPDF } = await import('jspdf');
     const imgData = canvas.toDataURL('image/png');
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;

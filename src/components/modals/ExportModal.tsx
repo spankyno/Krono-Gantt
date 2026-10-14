@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGanttStore } from '../../store/useGanttStore';
 import { getTheme } from '../../utils/themeUtils';
-import { exportGanttView, ExportOptions } from '../../utils/exportUtils';
+import { downloadBlob, exportGanttView, ExportOptions } from '../../utils/exportUtils';
 import { exportToMSProjectXML } from '../../utils/msProjectUtils';
 import { exportTasksToExcel } from '../../utils/excelUtils';
 import {
@@ -14,7 +14,6 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 
 interface ExportModalProps {
@@ -41,22 +40,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, containerRef,
     try {
       if (format === 'msproject') {
         const xml = exportToMSProjectXML(tasks, resources, 'KronoGantt Plan');
-        const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `KronoGantt_MSProject_${new Date().toISOString().substring(0, 10)}.xml`;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadBlob(
+          new Blob([xml], { type: 'application/xml;charset=utf-8' }),
+          `KronoGantt_MSProject_${new Date().toISOString().substring(0, 10)}.xml`
+        );
         setSuccessMessage('¡Archivo XML de MS Project exportado con éxito!');
-        setIsExporting(false);
         return;
       }
 
       if (format === 'excel') {
-        exportTasksToExcel(tasks, resources, `KronoGantt_Plan_${new Date().toISOString().substring(0, 10)}.xlsx`);
+        await exportTasksToExcel(tasks, resources, `KronoGantt_Plan_${new Date().toISOString().substring(0, 10)}.xlsx`);
         setSuccessMessage('¡Libro Excel exportado con éxito!');
-        setIsExporting(false);
         return;
       }
 
@@ -120,7 +114,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, containerRef,
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
         className="relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         style={{

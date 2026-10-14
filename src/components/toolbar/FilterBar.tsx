@@ -1,16 +1,15 @@
 import React from 'react';
 import { useGanttStore } from '../../store/useGanttStore';
-import { getTheme, STATUS_LABELS, PRIORITY_LABELS } from '../../utils/themeUtils';
+import { getTheme, STATUS_LABELS, } from '../../utils/themeUtils';
 import { calculateProjectBudgetSummary, formatCurrency } from '../../utils/costUtils';
 import {
   Search,
-  Filter,
+  
   X,
   AlertTriangle,
-  User,
+  
   CheckCircle2,
   DollarSign,
-  Briefcase,
 } from 'lucide-react';
 
 export const FilterBar: React.FC = () => {

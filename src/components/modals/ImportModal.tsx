@@ -3,15 +3,15 @@ import { useGanttStore } from '../../store/useGanttStore';
 import { getTheme } from '../../utils/themeUtils';
 import { readExcelFile, convertMappedDataToTasks, ColumnMapping, ExcelPreviewData } from '../../utils/excelUtils';
 import { importFromMSProjectXML } from '../../utils/msProjectUtils';
+import { LIMITS } from '../../utils/sanitize';
 import {
   X,
   Upload,
   FileSpreadsheet,
   FileCode,
-  CheckCircle,
+  
   AlertCircle,
   ArrowRight,
-  Database,
 } from 'lucide-react';
 
 interface ImportModalProps {
@@ -22,9 +22,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose }) => {
   const { resources, importTasks, settings } = useGanttStore();
   const theme = getTheme(settings.colorMode, settings.themePalette);
 
-  const [activeTab, setActiveTab] = useState<'excel' | 'msproject'>('excel');
   const [file, setFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [excelData, setExcelData] = useState<ExcelPreviewData | null>(null);
   const [replaceAll, setReplaceAll] = useState(true);
@@ -45,26 +43,29 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose }) => {
   const handleFileUpload = async (uploadedFile: File) => {
     setFile(uploadedFile);
     setErrorMessage(null);
-    setIsLoading(true);
 
     try {
+      if (uploadedFile.size > LIMITS.MAX_FILE_BYTES) {
+        throw new Error(`El archivo supera el máximo permitido (${LIMITS.MAX_FILE_BYTES / 1024 / 1024} MB).`);
+      }
       const fileName = uploadedFile.name.toLowerCase();
 
       if (fileName.endsWith('.xml')) {
         // MS Project XML file
-        setActiveTab('msproject');
-        const text = await uploadedFile.text();
-        const { tasks: importedTasks, projectName } = importFromMSProjectXML(text);
+        const { tasks: importedTasks } = importFromMSProjectXML(await uploadedFile.text());
         if (importedTasks.length === 0) {
           throw new Error('No se encontraron tareas válidas en el archivo XML de MS Project.');
         }
-        importTasks(importedTasks, replaceAll);
+        if (!window.confirm(`Se importarán ${importedTasks.length} tareas y se reemplazarán las actuales. ¿Continuar?`)) {
+          setFile(null);
+          return;
+        }
+        importTasks(importedTasks, true);
         onClose();
         return;
       }
 
       // Excel or CSV
-      setActiveTab('excel');
       const data = await readExcelFile(uploadedFile);
       setExcelData(data);
 
@@ -101,8 +102,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose }) => {
       setMapping(newMapping);
     } catch (err: any) {
       setErrorMessage(err.message || 'Error al procesar el archivo.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -118,7 +117,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
         className="relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         style={{

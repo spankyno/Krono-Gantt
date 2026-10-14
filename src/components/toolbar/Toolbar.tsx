@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ViewMode, ThemePalette, ColorMode, FontFamily } from '../../types/gantt';
+import { ViewMode, ThemePalette, FontFamily } from '../../types/gantt';
 import { useGanttStore } from '../../store/useGanttStore';
 import { getTheme } from '../../utils/themeUtils';
 import {
@@ -16,15 +16,15 @@ import {
   Moon,
   RotateCcw,
   RotateCw,
-  Search,
-  Filter,
-  Type,
+  
+  
+  
   Palette,
   Sliders,
   Plus,
-  HelpCircle,
+  
   RefreshCw,
-  Eye,
+  
   Check,
   FolderPlus,
   Info,
@@ -54,8 +54,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const {
     settings,
     updateSettings,
-    filter,
-    setFilter,
     undo,
     redo,
     canUndo,
@@ -292,7 +290,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
           {showConfigMenu && (
             <div
-              className="absolute right-0 top-full mt-2 w-72 rounded-2xl border p-4 shadow-2xl backdrop-blur-md z-50 animate-in fade-in duration-100"
+              className="absolute right-0 top-full mt-2 w-72 rounded-2xl border p-4 shadow-2xl backdrop-blur-md z-50"
               style={{
                 backgroundColor: `${theme.colors.bgSurface}fa`,
                 borderColor: theme.colors.borderLight,
@@ -388,7 +386,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
               <div className="pt-3 border-t mt-3 flex justify-between">
                 <button
-                  onClick={resetToDemo}
+                  onClick={() => {
+                    if (window.confirm('Se descartará el proyecto actual y se restaurará la demo. ¿Continuar?')) resetToDemo();
+                  }}
                   className="flex items-center gap-1 text-[11px] text-neutral-400 hover:text-amber-400"
                   title="Restablecer proyecto de demostración"
                 >
@@ -420,7 +420,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
           {showThemeMenu && (
             <div
-              className="absolute right-0 top-full mt-2 w-64 rounded-2xl border p-4 shadow-2xl backdrop-blur-md z-50 animate-in fade-in duration-100"
+              className="absolute right-0 top-full mt-2 w-64 rounded-2xl border p-4 shadow-2xl backdrop-blur-md z-50"
               style={{
                 backgroundColor: `${theme.colors.bgSurface}fa`,
                 borderColor: theme.colors.borderLight,

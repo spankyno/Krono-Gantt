@@ -1,5 +1,17 @@
-import { Task, Resource, TaskPriority, TaskStatus, TaskType } from '../types/gantt';
+import { Task, Resource, TaskType } from '../types/gantt';
 import { addDays, diffDays, formatISODate } from './dateUtils';
+import { LIMITS, newId, sanitizeTasks } from './sanitize';
+
+/** Escapa texto para XML (los nombres/notas son datos del usuario y no pueden alterar la estructura). */
+function escapeXml(value: string): string {
+  return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '') // caracteres de control no válidos en XML 1.0
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
 export function exportToMSProjectXML(
   tasks: Task[],
@@ -17,7 +29,6 @@ export function exportToMSProjectXML(
     const durationHours = task.duration * 8;
     const isMilestone = task.type === 'milestone' ? 1 : 0;
     const isSummary = task.type === 'group' ? 1 : 0;
-    const outlineLevel = task.parentId ? 2 : 1;
 
     let predecessorsXml = '';
     task.dependencies.forEach((depId) => {
@@ -36,7 +47,7 @@ export function exportToMSProjectXML(
     <Task>
       <UID>${uid}</UID>
       <ID>${uid}</ID>
-      <Name><![CDATA[${task.name}]]></Name>
+      <Name>${escapeXml(task.name)}</Name>
       <Type>0</Type>
       <CreateDate>${new Date().toISOString()}</CreateDate>
       <Start>${startIso}</Start>
@@ -47,8 +58,8 @@ export function exportToMSProjectXML(
       <Milestone>${isMilestone}</Milestone>
       <Summary>${isSummary}</Summary>
       <Critical>0</Critical>
-      <OutlineLevel>${outlineLevel}</OutlineLevel>
-      <Notes><![CDATA[${task.notes || ''}]]></Notes>
+      <OutlineLevel>${task.parentId ? 2 : 1}</OutlineLevel>
+      <Notes>${escapeXml(task.notes || '')}</Notes>
       ${predecessorsXml}
     </Task>`;
   });
@@ -59,7 +70,7 @@ export function exportToMSProjectXML(
     <Resource>
       <UID>${idx + 1}</UID>
       <ID>${idx + 1}</ID>
-      <Name><![CDATA[${r.name}]]></Name>
+      <Name>${escapeXml(r.name)}</Name>
       <Type>1</Type>
       <StandardRate>${r.hourlyRate}</StandardRate>
       <StandardRateFormat>2</StandardRateFormat>
@@ -68,8 +79,8 @@ export function exportToMSProjectXML(
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Project xmlns="http://schemas.microsoft.com/project">
-  <Name>${projectName}</Name>
-  <Title>${projectName}</Title>
+  <Name>${escapeXml(projectName)}</Name>
+  <Title>${escapeXml(projectName)}</Title>
   <CreationDate>${new Date().toISOString()}</CreationDate>
   <LastSaved>${new Date().toISOString()}</LastSaved>
   <ScheduleFromStart>1</ScheduleFromStart>
@@ -85,27 +96,27 @@ export function exportToMSProjectXML(
 }
 
 export function importFromMSProjectXML(xmlString: string): { tasks: Task[]; projectName?: string } {
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+  if (xmlString.length > LIMITS.MAX_FILE_BYTES) throw new Error('El archivo XML supera el tamaño máximo permitido.');
+  // Sin DTD ni entidades: evita expansión de entidades ("billion laughs") y XXE en cualquier parser.
+  if (/<!DOCTYPE|<!ENTITY/i.test(xmlString)) throw new Error('El XML contiene una declaración DOCTYPE/ENTITY no permitida.');
 
-  const projectName = xmlDoc.querySelector('Project > Name')?.textContent || 'Proyecto Importado';
-  const taskNodes = xmlDoc.querySelectorAll('Project > Tasks > Task');
+  const xmlDoc = new DOMParser().parseFromString(xmlString, 'text/xml');
+  if (xmlDoc.querySelector('parsererror')) throw new Error('El archivo no es un XML válido.');
+
+  const projectName = xmlDoc.querySelector('Project > Name')?.textContent?.slice(0, LIMITS.MAX_NAME) || 'Proyecto Importado';
+  const taskNodes = Array.from(xmlDoc.querySelectorAll('Project > Tasks > Task')).slice(0, LIMITS.MAX_TASKS);
 
   const parsedTasks: Task[] = [];
   const uidToId = new Map<string, string>();
 
-  // Pass 1: Create tasks and map UIDs
+  // Pasada 1: crear tareas y mapear UIDs
   taskNodes.forEach((node, index) => {
-    const uid = node.querySelector('UID')?.textContent || `${index + 1}`;
-    const name = node.querySelector('Name')?.textContent?.trim() || `Tarea ${index + 1}`;
-    const startStr = node.querySelector('Start')?.textContent?.substring(0, 10) || formatISODate(new Date());
-    let finishStr = node.querySelector('Finish')?.textContent?.substring(0, 10) || addDays(startStr, 3);
+    const text = (tag: string) => node.querySelector(tag)?.textContent ?? '';
+    const startStr = text('Start').substring(0, 10) || formatISODate(new Date());
+    let finishStr = text('Finish').substring(0, 10) || addDays(startStr, 3);
 
-    const isMilestone = node.querySelector('Milestone')?.textContent === '1';
-    const isSummary = node.querySelector('Summary')?.textContent === '1';
-    const percentComplete = parseFloat(node.querySelector('PercentComplete')?.textContent || '0');
-    const outlineLevel = parseInt(node.querySelector('OutlineLevel')?.textContent || '1', 10);
-    const notes = node.querySelector('Notes')?.textContent || '';
+    const isMilestone = text('Milestone') === '1';
+    const percentComplete = parseFloat(text('PercentComplete') || '0');
 
     let duration = Math.max(1, diffDays(startStr, finishStr));
     if (isMilestone) {
@@ -113,16 +124,13 @@ export function importFromMSProjectXML(xmlString: string): { tasks: Task[]; proj
       finishStr = startStr;
     }
 
-    let type: TaskType = 'task';
-    if (isMilestone) type = 'milestone';
-    else if (isSummary) type = 'group';
-
-    const taskId = `task-${Date.now()}-${index}`;
-    uidToId.set(uid, taskId);
+    const type: TaskType = isMilestone ? 'milestone' : text('Summary') === '1' ? 'group' : 'task';
+    const taskId = newId('task');
+    uidToId.set(text('UID') || `${index + 1}`, taskId);
 
     parsedTasks.push({
       id: taskId,
-      name,
+      name: text('Name').trim() || `Tarea ${index + 1}`,
       startDate: startStr,
       endDate: finishStr,
       duration,
@@ -131,27 +139,20 @@ export function importFromMSProjectXML(xmlString: string): { tasks: Task[]; proj
       priority: 'medium',
       status: percentComplete === 100 ? 'done' : percentComplete > 0 ? 'in_progress' : 'todo',
       dependencies: [],
-      notes,
+      notes: text('Notes'),
       order: index,
     });
   });
 
-  // Pass 2: Map predecessors (dependencies)
+  // Pasada 2: predecesoras
   taskNodes.forEach((node, index) => {
     const task = parsedTasks[index];
-    if (!task) return;
-
-    const predLinks = node.querySelectorAll('PredecessorLink');
-    predLinks.forEach((link) => {
-      const predUid = link.querySelector('PredecessorUID')?.textContent;
-      if (predUid && uidToId.has(predUid)) {
-        const depId = uidToId.get(predUid)!;
-        if (depId !== task.id && !task.dependencies.includes(depId)) {
-          task.dependencies.push(depId);
-        }
-      }
+    node.querySelectorAll('PredecessorLink').forEach((link) => {
+      const depId = uidToId.get(link.querySelector('PredecessorUID')?.textContent ?? '');
+      if (depId && depId !== task.id && !task.dependencies.includes(depId)) task.dependencies.push(depId);
     });
   });
 
-  return { tasks: parsedTasks, projectName };
+  // Validación final (fechas reales y acotadas, tope de tareas, referencias coherentes)
+  return { tasks: sanitizeTasks(parsedTasks), projectName };
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGanttStore } from '../../store/useGanttStore';
 import { getTheme, STATUS_LABELS } from '../../utils/themeUtils';
-import { Flag, Layers, ArrowRight, Ghost, Calendar, X } from 'lucide-react';
+import { Ghost, X } from 'lucide-react';
 
 interface LegendPanelProps {
   onClose?: () => void;
@@ -15,7 +15,7 @@ export const LegendPanel: React.FC<LegendPanelProps> = ({ onClose }) => {
 
   return (
     <div
-      className="absolute bottom-4 right-6 z-40 p-3.5 rounded-2xl border shadow-2xl backdrop-blur-md text-xs select-none max-w-xs transition-all animate-in slide-in-from-bottom-2 duration-200"
+      className="absolute bottom-4 right-6 z-40 p-3.5 rounded-2xl border shadow-2xl backdrop-blur-md text-xs select-none max-w-xs transition-all"
       style={{
         backgroundColor: `${theme.colors.bgSurface}ee`,
         borderColor: theme.colors.borderLight,

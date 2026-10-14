@@ -36,7 +36,7 @@ export const TaskBar: React.FC<TaskBarProps> = ({
   baselineX,
   baselineWidth,
   theme,
-  resource,
+  
   isSelected,
   onSelect,
   onStartDrag,

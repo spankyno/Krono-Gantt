@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { Task, Resource, TaskStatus, TaskPriority, TaskType } from '../../types/gantt';
+import React, { useEffect, useState } from 'react';
+import { TaskStatus, TaskPriority, TaskType } from '../../types/gantt';
 import { useGanttStore } from '../../store/useGanttStore';
-import { getTheme, STATUS_LABELS, PRIORITY_LABELS } from '../../utils/themeUtils';
+import { getTheme, } from '../../utils/themeUtils';
 import { calculateTaskCost, formatCurrency } from '../../utils/costUtils';
-import { addDays } from '../../utils/dateUtils';
+import { isValidISODate } from '../../utils/dateUtils';
 import {
   X,
-  Calendar,
+  
   DollarSign,
-  User,
-  Clock,
+  
+  
   Link,
   Trash2,
   AlertTriangle,
@@ -17,6 +17,27 @@ import {
   Layers,
   CheckCircle,
 } from 'lucide-react';
+
+/** Input de fecha con borrador local: solo confirma al store fechas completas y válidas. */
+const DateField: React.FC<{ value: string; onCommit: (v: string) => void; borderColor: string }> = ({ value, onCommit, borderColor }) => {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <input
+      type="date"
+      value={draft}
+      min="2000-01-01"
+      max="2100-12-31"
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (isValidISODate(e.target.value)) onCommit(e.target.value);
+      }}
+      onBlur={() => setDraft(value)}
+      className="w-full px-3 py-2 rounded-lg border bg-black/30 text-white text-xs focus:outline-none"
+      style={{ borderColor }}
+    />
+  );
+};
 
 interface TaskDetailModalProps {
   taskId: string;
@@ -36,7 +57,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ taskId, onClos
   const otherTasks = tasks.filter((t) => t.id !== task.id && !task.dependencies.includes(t.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
         className="relative w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         style={{
@@ -144,24 +165,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ taskId, onClos
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-semibold text-neutral-400 mb-1.5 block">Fecha Inicio</label>
-              <input
-                type="date"
-                value={task.startDate}
-                onChange={(e) => updateTask(task.id, { startDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border bg-black/30 text-white text-xs focus:outline-none"
-                style={{ borderColor: theme.colors.borderLight }}
-              />
+              <DateField value={task.startDate} onCommit={(v) => updateTask(task.id, { startDate: v })} borderColor={theme.colors.borderLight} />
             </div>
 
             <div>
               <label className="text-xs font-semibold text-neutral-400 mb-1.5 block">Fecha Fin</label>
-              <input
-                type="date"
-                value={task.endDate}
-                onChange={(e) => updateTask(task.id, { endDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border bg-black/30 text-white text-xs focus:outline-none"
-                style={{ borderColor: theme.colors.borderLight }}
-              />
+              <DateField value={task.endDate} onCommit={(v) => updateTask(task.id, { endDate: v })} borderColor={theme.colors.borderLight} />
             </div>
 
             <div>

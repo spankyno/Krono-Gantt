@@ -39,10 +39,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     removeDependency,
     dragState,
     setDragState,
+    commitDrag,
   } = useGanttStore();
 
   const theme = getTheme(settings.colorMode, settings.themePalette);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  // Estado de las tareas al empezar el arrastre: permite que Deshacer revierta el gesto completo.
+  const dragSnapshotRef = useRef<Task[] | null>(null);
 
   // Tooltip state
   const [hoveredTask, setHoveredTask] = useState<Task | null>(null);
@@ -156,6 +159,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         currentX: e.clientX,
       };
 
+      dragSnapshotRef.current = tasks;
       setDragState(drag);
     },
     [tasks, coordsMap, setDragState]
@@ -257,11 +261,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       }
 
       if (dragState) {
-        // Commit final state to history
-        const finalTask = tasks.find((t) => t.id === dragState.taskId);
-        if (finalTask) {
-          updateTask(dragState.taskId, { ...finalTask }, true);
-        }
+        if (dragSnapshotRef.current) commitDrag(dragSnapshotRef.current);
+        dragSnapshotRef.current = null;
         setDragState(null);
       }
     };
@@ -286,6 +287,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     setDragState,
     updateTask,
     addDependency,
+    commitDrag,
     scrollContainerRef,
   ]);
 

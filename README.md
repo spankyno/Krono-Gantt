@@ -1,20 +1,21 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# KronoGantt
 
-# Run and deploy your AI Studio app
+Diagramas de Gantt en el navegador (React 19 + Vite + Zustand + Tailwind 4): modo fantasma (líneas base),
+dependencias, costes, importación/exportación (Excel/CSV, MS Project XML) y exportación a PNG/JPG/SVG/PDF.
 
-This contains everything you need to run your app locally.
+Los datos se guardan **solo en el navegador** (`localStorage`); no hay backend.
 
-View your app in AI Studio: https://ai.studio/apps/29050678-2c6d-4d20-a414-236590b8e958
+## Desarrollo
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm run lint     # tsc --noEmit
+npm test         # pruebas de saneamiento y utilidades
+npm run build
+```
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Seguridad
+- Todo dato externo (localStorage, Excel, XML) pasa por `src/utils/sanitize.ts`.
+- Cabeceras HTTP (CSP, HSTS, etc.) en `vercel.json`. Si cambias el script de analítica de `index.html`,
+  actualiza también `script-src`/`connect-src`.
+- Informe completo: `SECURITY_AUDIT.md`.

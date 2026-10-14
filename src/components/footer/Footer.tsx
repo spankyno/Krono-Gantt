@@ -6,9 +6,8 @@ import {
   BookOpen,
   Keyboard,
   Code2,
-  CheckCircle2,
+  
   Layers,
-  Sparkles,
 } from 'lucide-react';
 
 interface FooterProps {

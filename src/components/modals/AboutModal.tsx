@@ -3,8 +3,8 @@ import { useGanttStore } from '../../store/useGanttStore';
 import { getTheme } from '../../utils/themeUtils';
 import {
   X,
-  Info,
-  Layers,
+  
+  
   Code2,
   BookOpen,
   Keyboard,
@@ -12,15 +12,15 @@ import {
   Ghost,
   DollarSign,
   Upload,
-  Download,
-  Calendar,
-  CheckCircle2,
+  
+  
+  
   MousePointer,
-  Move,
-  ArrowRight,
-  ExternalLink,
-  Cpu,
-  Palette,
+  
+  
+  
+  
+  
   ShieldCheck,
 } from 'lucide-react';
 
@@ -36,7 +36,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, defaultTab = 'o
   const [activeTab, setActiveTab] = useState<'overview' | 'instructions' | 'stack' | 'shortcuts'>(defaultTab);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
       <div
         className="relative w-full max-w-4xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
         style={{

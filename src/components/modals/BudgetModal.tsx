@@ -5,14 +5,13 @@ import { calculateProjectBudgetSummary, formatCurrency } from '../../utils/costU
 import {
   X,
   DollarSign,
-  TrendingUp,
+  
   AlertTriangle,
-  User,
+  
   Plus,
   Trash2,
   Calendar,
   Briefcase,
-  CheckCircle,
 } from 'lucide-react';
 
 interface BudgetModalProps {
@@ -73,7 +72,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
         className="relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         style={{

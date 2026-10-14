@@ -1,6 +1,9 @@
-import * as XLSX from 'xlsx';
 import { Task, Resource, TaskStatus, TaskPriority, TaskType } from '../types/gantt';
 import { addDays, diffDays, formatISODate } from './dateUtils';
+import { LIMITS, newId, sanitizeTasks } from './sanitize';
+
+// SheetJS (~400 KB) solo se descarga cuando el usuario importa/exporta un Excel.
+const loadXLSX = () => import('@e965/xlsx');
 
 export interface ColumnMapping {
   name: string;
@@ -17,57 +20,28 @@ export interface ColumnMapping {
 }
 
 export interface ExcelPreviewData {
-  sheets: string[];
-  selectedSheet: string;
   headers: string[];
   rows: Record<string, any>[];
   totalRows: number;
 }
 
-export function readExcelFile(file: File): Promise<ExcelPreviewData> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+export async function readExcelFile(file: File): Promise<ExcelPreviewData> {
+  if (file.size > LIMITS.MAX_FILE_BYTES) {
+    throw new Error(`El archivo supera el máximo permitido (${LIMITS.MAX_FILE_BYTES / 1024 / 1024} MB).`);
+  }
+  const XLSX = await loadXLSX();
+  const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = worksheet ? XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 }) : [];
 
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { header: 1 });
+  if (jsonData.length === 0) throw new Error('El archivo Excel está vacío.');
 
-        if (!jsonData || jsonData.length === 0) {
-          throw new Error('El archivo Excel está vacío.');
-        }
+  const headers = (jsonData[0] as unknown[]).map((h, i) => String(h || `Columna_${i + 1}`).trim());
+  const rows = (jsonData.slice(1, LIMITS.MAX_TASKS + 1) as unknown[][])
+    .filter((r) => r.some((cell) => cell !== null && cell !== undefined && cell !== ''))
+    .map((row) => Object.fromEntries(headers.map((h, i) => [h, row[i]])) as Record<string, any>);
 
-        const headers = (jsonData[0] as string[]).map((h, i) => String(h || `Columna_${i + 1}`).trim());
-        const rawRows = jsonData.slice(1) as any[][];
-
-        const rows: Record<string, any>[] = rawRows
-          .filter((r) => r.some((cell) => cell !== null && cell !== undefined && cell !== ''))
-          .map((row) => {
-            const rowObj: Record<string, any> = {};
-            headers.forEach((header, colIdx) => {
-              rowObj[header] = row[colIdx];
-            });
-            return rowObj;
-          });
-
-        resolve({
-          sheets: workbook.SheetNames,
-          selectedSheet: sheetName,
-          headers,
-          rows: rows.slice(0, 50), // preview first 50 rows
-          totalRows: rows.length,
-        });
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    reader.onerror = (err) => reject(err);
-    reader.readAsArrayBuffer(file);
-  });
+  return { headers, rows, totalRows: rows.length };
 }
 
 function parseDateCell(val: any): string {
@@ -100,7 +74,7 @@ export function convertMappedDataToTasks(
   mapping: ColumnMapping,
   resources: Resource[]
 ): Task[] {
-  return rows.map((row, index) => {
+  const tasks = rows.map((row, index): Task => {
     const name = mapping.name && row[mapping.name] ? String(row[mapping.name]).trim() : `Tarea ${index + 1}`;
     const startDate = mapping.startDate && row[mapping.startDate] 
       ? parseDateCell(row[mapping.startDate]) 
@@ -170,7 +144,7 @@ export function convertMappedDataToTasks(
     }
 
     return {
-      id: `task-imp-${Date.now()}-${index}`,
+      id: newId('task'),
       name,
       startDate,
       endDate,
@@ -186,9 +160,12 @@ export function convertMappedDataToTasks(
       order: index,
     };
   });
+  // Fechas, enums y límites validados antes de llegar al store
+  return sanitizeTasks(tasks);
 }
 
-export function exportTasksToExcel(tasks: Task[], resources: Resource[], filename: string = 'KronoGantt_Plan.xlsx') {
+export async function exportTasksToExcel(tasks: Task[], resources: Resource[], filename: string = 'KronoGantt_Plan.xlsx') {
+  const XLSX = await loadXLSX();
   const resourceMap = new Map(resources.map((r) => [r.id, r.name]));
 
   const data = tasks.map((t, idx) => ({

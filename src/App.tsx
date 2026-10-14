@@ -1,7 +1,6 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useGanttStore } from './store/useGanttStore';
 import { getTheme } from './utils/themeUtils';
-import { Task } from './types/gantt';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { FilterBar } from './components/toolbar/FilterBar';
 import { TaskTable } from './components/table/TaskTable';
@@ -53,6 +52,7 @@ export default function App() {
 
   // Filter tasks
   const visibleTasks = useMemo(() => {
+    const byId = new Map(tasks.map((t) => [t.id, t]));
     return tasks.filter((t) => {
       // Search query
       if (filter.searchQuery) {
@@ -76,7 +76,7 @@ export default function App() {
 
       // Group collapse filter: if parent is collapsed, hide subtask
       if (t.parentId) {
-        const parent = tasks.find((p) => p.id === t.parentId);
+        const parent = byId.get(t.parentId);
         if (parent && parent.isExpanded === false) {
           return false;
         }
